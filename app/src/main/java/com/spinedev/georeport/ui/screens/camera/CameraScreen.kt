@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.spinedev.georeport.utils.ImageUtils
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -165,26 +166,46 @@ private fun captureImage(
         return
     }
     
-    val photoFile = File(
-        context.getExternalFilesDir(null),
-        SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US)
-            .format(System.currentTimeMillis()) + ".jpg"
+    // Temporary file for raw capture
+    val tempFile = File(
+        context.cacheDir,
+        "temp_${System.currentTimeMillis()}.jpg"
     )
     
-    val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
     
     imageCapture.takePicture(
         outputOptions,
         ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageSavedCallback {
             override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                val savedUri = Uri.fromFile(photoFile)
-                Log.d(TAG, "Photo saved: $savedUri")
-                onImageCaptured(savedUri)
+                val tempUri = Uri.fromFile(tempFile)
+                Log.d(TAG, "Photo captured: $tempUri")
+                
+                // Compress and save to final location
+                val finalFile = File(
+                    context.getExternalFilesDir(null),
+                    "IMG_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.jpg"
+                )
+                
+                val compressed = ImageUtils.compressImage(context, tempUri, finalFile)
+                
+                // Delete temp file
+                tempFile.delete()
+                
+                if (compressed) {
+                    val finalUri = Uri.fromFile(finalFile)
+                    Log.d(TAG, "Photo compressed and saved: $finalUri")
+                    onImageCaptured(finalUri)
+                } else {
+                    Log.e(TAG, "Failed to compress image")
+                    onImageCaptured(null)
+                }
             }
             
             override fun onError(exception: ImageCaptureException) {
                 Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
+                tempFile.delete()
                 onImageCaptured(null)
             }
         }

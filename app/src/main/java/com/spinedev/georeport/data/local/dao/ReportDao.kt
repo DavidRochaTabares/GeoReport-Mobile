@@ -72,6 +72,12 @@ interface ReportDao {
     suspend fun updateSyncStatus(reportId: String, status: String, timestamp: Long = System.currentTimeMillis())
     
     /**
+     * Update image URL of a report
+     */
+    @Query("UPDATE reports SET imageUrl = :imageUrl, updatedAt = :timestamp WHERE id = :reportId")
+    suspend fun updateImageUrl(reportId: String, imageUrl: String, timestamp: Long = System.currentTimeMillis())
+    
+    /**
      * Delete all reports (for testing/debugging)
      */
     @Query("DELETE FROM reports")

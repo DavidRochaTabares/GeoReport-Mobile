@@ -122,6 +122,9 @@ dependencies {
     // Coil for image loading
     implementation(libs.coil.compose)
     
+    // ExifInterface for image rotation
+    implementation(libs.androidx.exifinterface)
+    
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

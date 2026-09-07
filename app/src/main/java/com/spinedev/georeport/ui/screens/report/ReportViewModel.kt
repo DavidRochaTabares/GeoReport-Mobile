@@ -1,6 +1,7 @@
 package com.spinedev.georeport.ui.screens.report
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.spinedev.georeport.data.local.database.GeoReportDatabase
@@ -80,6 +81,17 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 _uiState.value = ReportUiState.Loading
                 
+                // Convert URI to file path if needed
+                val localImagePath = imageUri?.let { uri ->
+                    if (uri.startsWith("file://")) {
+                        uri.removePrefix("file://")
+                    } else {
+                        uri
+                    }
+                }
+                
+                Log.d("ReportViewModel", "Creating report with image: $imageUri -> $localImagePath")
+                
                 val report = Report(
                     id = UUID.randomUUID().toString(),
                     title = title,
@@ -87,7 +99,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                     category = category,
                     latitude = latitude,
                     longitude = longitude,
-                    localImagePath = imageUri,
+                    localImagePath = localImagePath,
                     userId = userId,
                     syncStatus = SyncStatus.PENDING,
                     createdAt = System.currentTimeMillis(),
@@ -116,13 +128,22 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 _uiState.value = ReportUiState.Loading
                 
+                // Convert URI to file path if needed
+                val localImagePath = imageUri?.let { uri ->
+                    if (uri.startsWith("file://")) {
+                        uri.removePrefix("file://")
+                    } else {
+                        uri
+                    }
+                }
+                
                 val existingReport = repository.getReportById(reportId)
                 if (existingReport != null) {
                     val updatedReport = existingReport.copy(
                         title = title,
                         description = description,
                         category = category,
-                        localImagePath = imageUri ?: existingReport.localImagePath,
+                        localImagePath = localImagePath ?: existingReport.localImagePath,
                         updatedAt = System.currentTimeMillis(),
                         syncStatus = SyncStatus.PENDING // Mark for sync
                     )

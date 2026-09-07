@@ -43,6 +43,9 @@ coroutines = "1.9.0"
 # Coil (Image loading for Compose)
 coil = "2.6.0"
 
+# ExifInterface
+exifinterface = "1.3.7"
+
 # KSP (must match Kotlin version)
 ksp = "2.0.21-1.0.27"
 
@@ -116,6 +119,9 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 
 # Coil
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# ExifInterface
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -28,35 +28,52 @@ class SupabaseStorageDataSource {
     suspend fun uploadImage(imageFile: File, reportId: String): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "=== SUPABASE UPLOAD START ===")
+                Log.d(TAG, "Report ID: $reportId")
+                Log.d(TAG, "Image file: ${imageFile.absolutePath}")
+                Log.d(TAG, "File exists: ${imageFile.exists()}")
+                
                 if (!imageFile.exists()) {
+                    Log.e(TAG, "✗ Image file does not exist!")
                     return@withContext Result.failure(Exception("Image file does not exist"))
                 }
+                
+                Log.d(TAG, "File size: ${imageFile.length()} bytes")
                 
                 // Generate unique filename
                 val timestamp = System.currentTimeMillis()
                 val uniqueId = UUID.randomUUID().toString().take(8)
                 val fileName = "${reportId}_${timestamp}_${uniqueId}.jpg"
                 
-                Log.d(TAG, "Uploading image: $fileName (${imageFile.length()} bytes)")
+                Log.d(TAG, "Generated filename: $fileName")
+                Log.d(TAG, "Target bucket: $bucketName")
+                Log.d(TAG, "Supabase URL: ${SupabaseConfig.SUPABASE_URL}")
                 
                 // Read file bytes
                 val imageBytes = imageFile.readBytes()
+                Log.d(TAG, "Read ${imageBytes.size} bytes from file")
                 
                 // Upload to Supabase Storage
+                Log.d(TAG, "Calling storage.from($bucketName).upload()...")
                 storage.from(bucketName).upload(
                     path = fileName,
                     data = imageBytes,
                     upsert = false
                 )
+                Log.d(TAG, "✓ Upload call completed")
                 
                 // Get public URL
                 val publicUrl = storage.from(bucketName).publicUrl(fileName)
+                Log.d(TAG, "✓ Public URL obtained: $publicUrl")
                 
-                Log.d(TAG, "Upload successful: $publicUrl")
+                Log.d(TAG, "=== SUPABASE UPLOAD SUCCESS ===")
                 Result.success(publicUrl)
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Upload failed", e)
+                Log.e(TAG, "=== SUPABASE UPLOAD FAILED ===", e)
+                Log.e(TAG, "Exception type: ${e.javaClass.name}")
+                Log.e(TAG, "Exception message: ${e.message}")
+                e.printStackTrace()
                 Result.failure(e)
             }
         }

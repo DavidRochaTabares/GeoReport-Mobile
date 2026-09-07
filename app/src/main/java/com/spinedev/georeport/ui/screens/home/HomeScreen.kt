@@ -7,10 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.spinedev.georeport.GeoReportApplication
 import com.spinedev.georeport.data.repository.AuthRepository
 import com.spinedev.georeport.ui.components.OpenStreetMapView
 import com.spinedev.georeport.ui.components.rememberLocationPermission
+import com.spinedev.georeport.utils.ConnectivityObserver
 import kotlinx.coroutines.launch
 
 /**
@@ -30,6 +33,11 @@ fun HomeScreen(
     var centerOnLocation by remember { mutableStateOf(false) }
     val authRepository = remember { AuthRepository() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    
+    // Connectivity observer
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isConnected by connectivityObserver.observeConnectivity().collectAsState(initial = false)
     
     // Location permission handling
     val locationPermission = rememberLocationPermission()
@@ -60,6 +68,17 @@ fun HomeScreen(
                                 onNavigateToReportList()
                             },
                             leadingIcon = { Icon(Icons.Default.List, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sincronizar Ahora") },
+                            onClick = {
+                                showMenu = false
+                                scope.launch {
+                                    (context.applicationContext as? GeoReportApplication)?.triggerImmediateSync()
+                                }
+                            },
+                            leadingIcon = { Icon(Icons.Default.Sync, contentDescription = null) },
+                            enabled = isConnected
                         )
                         Divider()
                         DropdownMenuItem(
@@ -127,24 +146,52 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (selectedTab) {
-                0 -> {
-                    // OpenStreetMap view
-                    OpenStreetMapView(
-                        modifier = Modifier.fillMaxSize(),
-                        reportMarkers = emptyList(), // TODO: Load from repository
-                        hasLocationPermission = locationPermission.hasPermission,
-                        centerOnLocation = centerOnLocation,
-                        onLocationCentered = { centerOnLocation = false },
-                        onMarkerClick = { reportId ->
-                            onNavigateToReportDetail(reportId)
-                        }
-                    )
+            // Connectivity indicator
+            if (!isConnected) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.CloudOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Sin conexión - Los cambios se sincronizarán automáticamente",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+            
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (selectedTab) {
+                    0 -> {
+                        // OpenStreetMap view
+                        OpenStreetMapView(
+                            modifier = Modifier.fillMaxSize(),
+                            reportMarkers = emptyList(), // TODO: Load from repository
+                            hasLocationPermission = locationPermission.hasPermission,
+                            centerOnLocation = centerOnLocation,
+                            onLocationCentered = { centerOnLocation = false },
+                            onMarkerClick = { reportId ->
+                                onNavigateToReportDetail(reportId)
+                            }
+                        )
                     
                     // Show permission rationale if needed
                     if (locationPermission.shouldShowRationale) {
@@ -164,11 +211,12 @@ fun HomeScreen(
                             }
                         )
                     }
-                }
-                1 -> {
-                    // Navigate to list screen instead of showing inline
-                    LaunchedEffect(Unit) {
-                        selectedTab = 0 // Reset to map
+                    }
+                    1 -> {
+                        // Navigate to list screen instead of showing inline
+                        LaunchedEffect(Unit) {
+                            selectedTab = 0 // Reset to map
+                        }
                     }
                 }
             }

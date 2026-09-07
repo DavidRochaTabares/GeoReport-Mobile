@@ -1,13 +1,17 @@
 package com.spinedev.georeport.data.repository
 
+import android.util.Log
 import com.spinedev.georeport.data.local.dao.ReportDao
 import com.spinedev.georeport.data.local.entity.ReportEntity
 import com.spinedev.georeport.data.model.Report
 import com.spinedev.georeport.data.model.SyncStatus
+import com.spinedev.georeport.data.remote.FirestoreDataSource
 import com.spinedev.georeport.data.remote.SupabaseStorageDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.File
+
+private const val TAG = "ReportRepository"
 
 /**
  * Repository for Report data
@@ -16,8 +20,8 @@ import java.io.File
  */
 class ReportRepository(
     private val reportDao: ReportDao,
+    private val firestoreDataSource: FirestoreDataSource = FirestoreDataSource(),
     private val supabaseStorage: SupabaseStorageDataSource = SupabaseStorageDataSource()
-    // Firebase Firestore data source will be added here after configuration
 ) {
     
     /**
@@ -134,7 +138,81 @@ class ReportRepository(
         return supabaseStorage.imageExists(imageUrl)
     }
     
-    // Firebase Firestore sync methods will be added here after Firebase configuration
-    // - syncReportsToFirestore()
-    // - syncReportsFromFirestore()
+    // ========== Firestore Sync Methods ==========
+    
+    /**
+     * Sync a single report to Firestore
+     */
+    suspend fun syncReportToFirestore(report: Report): Result<Unit> {
+        return try {
+            firestoreDataSource.uploadReport(report).getOrThrow()
+            updateSyncStatus(report.id, SyncStatus.SYNCED)
+            Log.d(TAG, "Report synced to Firestore: ${report.id}")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            updateSyncStatus(report.id, SyncStatus.FAILED)
+            Log.e(TAG, "Failed to sync report to Firestore: ${report.id}", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Download reports from Firestore and save to Room
+     */
+    suspend fun downloadReportsFromFirestore(userId: String): Result<Int> {
+        return try {
+            val remoteReports = firestoreDataSource.downloadReports(userId).getOrThrow()
+            var updatedCount = 0
+            
+            for (remoteReport in remoteReports) {
+                val localReport = reportDao.getReportById(remoteReport.id)
+                
+                if (localReport == null) {
+                    // New report from server
+                    reportDao.insertReport(ReportEntity.fromDomainModel(remoteReport))
+                    updatedCount++
+                    Log.d(TAG, "Downloaded new report: ${remoteReport.id}")
+                } else {
+                    // Check if remote is newer (last-write-wins)
+                    if (remoteReport.updatedAt > localReport.updatedAt) {
+                        reportDao.updateReport(
+                            ReportEntity.fromDomainModel(
+                                remoteReport.copy(
+                                    localImagePath = localReport.localImagePath // Preserve local image
+                                )
+                            )
+                        )
+                        updatedCount++
+                        Log.d(TAG, "Updated report from server: ${remoteReport.id}")
+                    }
+                }
+            }
+            
+            Log.d(TAG, "Downloaded/updated $updatedCount reports from Firestore")
+            Result.success(updatedCount)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download reports from Firestore", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Update image URL in Room and Firestore
+     */
+    suspend fun updateImageUrl(reportId: String, imageUrl: String): Result<Unit> {
+        return try {
+            reportDao.updateImageUrl(reportId, imageUrl)
+            
+            val report = reportDao.getReportById(reportId)?.toDomainModel()
+            if (report != null) {
+                firestoreDataSource.uploadReport(report).getOrThrow()
+                Log.d(TAG, "Image URL updated for report: $reportId")
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update image URL for report: $reportId", e)
+            Result.failure(e)
+        }
+    }
 }
