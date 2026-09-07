@@ -1,0 +1,18 @@
+## This file contains the path to your Android SDK installation.
+## This is required by Android Studio, but should generally be put in your ~/.gradle/gradle.properties file
+## (on Windows, %USERPROFILE%\.gradle\gradle.properties), in order to avoid accidentally committing it to version control.
+#
+# Location of the android SDK. This is normally set by Android Studio.
+sdk.dir=C\:\\Users\\YourUsername\\AppData\\Local\\Android\\Sdk
+
+## GeoReport Configuration
+## Copy this file to 'local.properties' and fill in your actual keys
+
+# Supabase Publishable Key (anon public key)
+# Get this from: Supabase Dashboard > Settings > API > anon public
+# This is the PUBLIC key - safe to use in client apps
+SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+
+# Google Maps API Key (will be configured later)
+# Get this from: Google Cloud Console > APIs & Services > Credentials
+# MAPS_API_KEY=your_google_maps_api_key_here

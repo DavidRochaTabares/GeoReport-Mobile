@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "735198590539",
+    "project_id": "georeport-1a113",
+    "storage_bucket": "georeport-1a113.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735198590539:android:e5eeb73946888209c7ffce",
+        "android_client_info": {
+          "package_name": "com.spinedev.georeport"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPyGVnepeay7L7Sc8HEvtyWiUrRibIzCY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
